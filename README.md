@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/mmmpa/kick_my_mention.svg?style=svg)](https://circleci.com/gh/mmmpa/kick_my_mention)
+
 # Kick my mention
 
 現在時刻の 0 分から 1 時間前の 0 分までのメンションを採取し slack に通知する。
