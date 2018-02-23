@@ -49,23 +49,24 @@ type Payload struct {
 
 func main() {
 	if len(os.Getenv("LOCAL_RUN")) > 0 {
-		execute()
+		fmt.Println(execute())
 	} else {
 		lambda.Start(execute)
 	}
 }
 
-func execute() {
+func execute() string {
 	api := "https://api.github.com/notifications?participating=true"
 	token := os.Getenv("KICK_MY_MENTION_TOKEN")
 	hook := os.Getenv("KICK_MY_MENTION_SLACK_HOOK")
 
-	notifications, err := fetchNotifications(api, token)
+	notifications, raw, err := fetchNotifications(api, token)
 
 	if err != nil {
-		fmt.Errorf("%v", err)
-		return
+		return fmt.Sprintf("error: %v+", err)
 	}
+
+	mentions := []Mention{}
 
 	for _, notification := range notifications {
 		if !notification.IsMention() {
@@ -75,15 +76,19 @@ func execute() {
 		mention, err := fetchMention(notification.Subject.LatestCommentURL)
 
 		if err != nil {
-			fmt.Errorf("%v", err)
 			continue
 		}
 
-		err = postMessage(hook, mention)
-		if err != nil {
-			fmt.Errorf("%v", err)
-		}
+		mentions = append(mentions, mention)
 	}
+
+	err = postMessage(hook, mentions)
+
+	if err != nil {
+		return fmt.Sprintf("error: %v+, raw: %v+", err, string(raw))
+	}
+
+	return string(raw)
 }
 
 func fetch(url, token string) ([]byte, error) {
@@ -115,7 +120,7 @@ func fetchMention(url string) (Mention, error) {
 	return mention, json.Unmarshal(b, &mention)
 }
 
-func fetchNotifications(url, token string) ([]Notification, error) {
+func fetchNotifications(url, token string) ([]Notification, []byte, error) {
 	var notifications []Notification
 
 	since, before := sinceAndBefore(time.Now().UTC())
@@ -123,26 +128,30 @@ func fetchNotifications(url, token string) ([]Notification, error) {
 	b, err := fetch(queried, token)
 
 	if err != nil {
-		return notifications, err
+		return notifications, b, err
 	}
 
-	return notifications, json.Unmarshal(b, &notifications)
+	return notifications, b, json.Unmarshal(b, &notifications)
 }
 
-func postMessage(url string, mention Mention) error {
+func postMessage(url string, mentions []Mention) error {
+	attachments := make([]Attachment, len(mentions))
+
+	for i, mention := range mentions {
+		attachments[i] = Attachment{
+			Color:      "#1abc9c",
+			AuthorName: fmt.Sprintf("from @%v", mention.User.Login),
+			AuthorLink: mention.User.URL,
+			Title:      mention.HTMLURL,
+			TitleLink:  mention.HTMLURL,
+			Text:       mention.Body,
+			ThumbURL:   mention.User.AvatarURL,
+		}
+	}
+
 	payloadString, err := json.Marshal(
 		Payload{
-			Attachments: []Attachment{
-				{
-					Color:      "#1abc9c",
-					AuthorName: fmt.Sprintf("from @%v", mention.User.Login),
-					AuthorLink: mention.User.URL,
-					Title:      mention.HTMLURL,
-					TitleLink:  mention.HTMLURL,
-					Text:       mention.Body,
-					ThumbURL:   mention.User.AvatarURL,
-				},
-			},
+			Attachments: attachments,
 		},
 	)
 
@@ -171,7 +180,7 @@ func postMessage(url string, mention Mention) error {
 
 func sinceAndBefore(now time.Time) (string, string) {
 	since := now.Add(time.Duration(-1) * time.Hour).Format("2006-01-02T15") + ":00:00Z"
-	before := now.Format("2006-01-02T15") + ":00:00Z"
+	before := now.Format("2006-01-02T15:04:05Z")
 
 	return since, before
 }
