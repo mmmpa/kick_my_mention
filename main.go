@@ -55,7 +55,7 @@ func main() {
 	}
 }
 
-func execute() string {
+func execute() (string, error) {
 	api := "https://api.github.com/notifications?participating=true"
 	token := os.Getenv("KICK_MY_MENTION_TOKEN")
 	hook := os.Getenv("KICK_MY_MENTION_SLACK_HOOK")
@@ -63,7 +63,7 @@ func execute() string {
 	notifications, raw, err := fetchNotifications(api, token)
 
 	if err != nil {
-		return fmt.Sprintf("error: %v+", err)
+		return fmt.Sprintf("error: %v+", err), err
 	}
 
 	mentions := []Mention{}
@@ -85,10 +85,10 @@ func execute() string {
 	err = postMessage(hook, mentions)
 
 	if err != nil {
-		return fmt.Sprintf("error: %v+, raw: %v+", err, string(raw))
+		return fmt.Sprintf("error: %v+, raw: %v+", err, string(raw)), err
 	}
 
-	return string(raw)
+	return string(raw), nil
 }
 
 func fetch(url, token string) ([]byte, error) {
