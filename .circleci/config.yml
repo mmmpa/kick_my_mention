@@ -1,9 +1,56 @@
+---
+version: 2
 jobs:
   build:
-    working_directory: /go/src/github.com/mmmpa/kick_my_mention
+    working_directory: "/go/src/github.com/mmmpa/kick_my_mention"
     docker:
-      - image: circleci/golang:1.10
+    - image: circleci/golang:1.10
     steps:
-      - checkout
-      - run: go get -v -t -d ./...
-      - run: go test -v ./...
+    - checkout
+    - run: go get -v -t -d ./...
+    - run: go build -o main
+    - run: zip main.zip main
+    - persist_to_workspace:
+        root: "/go/src/github.com/mmmpa/kick_my_mention"
+        paths:
+        - main.zip
+  deploy:
+    working_directory: "~/"
+    docker:
+    - image: circleci/golang:1.10
+    steps:
+    - attach_workspace:
+        at: "/go/src/github.com/mmmpa/kick_my_mention"
+    - run: mkdir -p ~/.ssh
+    - run: ssh-keyscan github.com > ~/.ssh/known_hosts
+    - run: git clone git@github.com:mmmpa/kick_my_mention_terraform.git terra
+    - run: mv /go/src/github.com/mmmpa/kick_my_mention/main.zip ~/terra/main.zip
+    - run: git config --global user.email "mmmpa.mmmpa@gmail.com"
+    - run: git config --global user.name "mmmpa circlci"
+    - run: cd ~/terra && git add main.zip && git commit -m 'updated by circleci' &&
+        git push origin master
+  test:
+    working_directory: "/go/src/github.com/mmmpa/kick_my_mention"
+    docker:
+    - image: circleci/golang:1.10
+    steps:
+    - checkout
+    - run: go get -v -t -d ./...
+    - run: go test -v ./...
+workflows:
+  version: 2
+  test:
+    jobs:
+    - test
+    - build:
+        filters:
+          branches:
+            only: master
+        requires:
+        - test
+    - deploy:
+        filters:
+          branches:
+            only: master
+        requires:
+        - build
