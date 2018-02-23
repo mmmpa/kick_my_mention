@@ -13,7 +13,7 @@ func TestSinceAndBefore(t *testing.T) {
 		t.Fatalf("failed test: %s", since)
 	}
 
-	if before != "1979-01-01T07:00:00Z" {
+	if before != "1979-01-01T07:23:00Z" {
 		t.Fatalf("failed test: %s", before)
 	}
 }

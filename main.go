@@ -171,7 +171,7 @@ func postMessage(url string, mention Mention) error {
 
 func sinceAndBefore(now time.Time) (string, string) {
 	since := now.Add(time.Duration(-1) * time.Hour).Format("2006-01-02T15") + ":00:00Z"
-	before := now.Format("2006-01-02T15") + ":00:00Z"
+	before := now.Format("2006-01-02T15:04:05Z")
 
 	return since, before
 }
