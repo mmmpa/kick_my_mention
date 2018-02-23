@@ -1,0 +1,16 @@
+jobs:
+  build:
+    working_directory: ~/
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: /go/src/github.com/mmmpa/kick_my_mention
+
+      - run: mkdir -p ~/.ssh
+      - run: ssh-keyscan github.com > ~/.ssh/known_hosts
+      - run: git clone git@github.com:mmmpa/kick_my_mention_terraform.git terra
+      - run: mv /go/src/github.com/mmmpa/kick_my_mention/main.zip ~/terra/main.zip
+      - run: git config --global user.email "mmmpa.mmmpa@gmail.com"
+      - run: git config --global user.name "mmmpa circlci"
+      - run: cd ~/terra && git add main.zip && git commit -m 'updated by circleci' && git push origin master

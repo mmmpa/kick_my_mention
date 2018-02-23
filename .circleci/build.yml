@@ -1,0 +1,15 @@
+jobs:
+  build:
+    working_directory: /go/src/github.com/mmmpa/kick_my_mention
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - checkout
+      - run: go get -v -t -d ./...
+      - run: go build -o main
+      - run: zip main.zip main
+
+      - persist_to_workspace:
+          root: /go/src/github.com/mmmpa/kick_my_mention
+          paths:
+            - main.zip
