@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"time"
 	"github.com/aws/aws-lambda-go/lambda"
+	"log"
 )
 
 type Attachment struct {
@@ -49,7 +50,7 @@ type Payload struct {
 
 func main() {
 	if len(os.Getenv("LOCAL_RUN")) > 0 {
-		fmt.Println(execute())
+		log.Println(execute())
 	} else {
 		lambda.Start(execute)
 	}
@@ -63,8 +64,10 @@ func execute() (string, error) {
 	notifications, raw, err := fetchNotifications(api, token)
 
 	if err != nil {
-		return fmt.Sprintf("error: %v+", err), err
+		return "fetchNotifications error", err
 	}
+
+	log.Println(string(raw))
 
 	mentions := []Mention{}
 
@@ -76,6 +79,7 @@ func execute() (string, error) {
 		mention, err := fetchMention(notification.Subject.LatestCommentURL)
 
 		if err != nil {
+			log.Printf("fetchNotifications error: %v+\n", err)
 			continue
 		}
 
@@ -85,10 +89,10 @@ func execute() (string, error) {
 	err = postMessage(hook, mentions)
 
 	if err != nil {
-		return fmt.Sprintf("error: %v+, raw: %v+", err, string(raw)), err
+		return "postMessage error", err
 	}
 
-	return string(raw), nil
+	return "ok", nil
 }
 
 func fetch(url, token string) ([]byte, error) {
